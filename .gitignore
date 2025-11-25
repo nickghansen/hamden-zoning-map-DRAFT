@@ -1,0 +1,18 @@
+# Python scripts (not needed for the live map)
+*.py
+__pycache__/
+*.pyc
+
+# Data source files (not needed for the live map)
+school_zones.txt
+
+# Mac files
+.DS_Store
+
+# Zip files
+*.zip
+
+# Temporary files
+*_temp.geojson
+*_v2.geojson
+*_v3.geojson
