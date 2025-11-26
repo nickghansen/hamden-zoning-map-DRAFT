@@ -41,6 +41,12 @@ const schoolColors = {
 let zoningLayer = L.layerGroup().addTo(map);
 let schoolLayer = L.layerGroup().addTo(map);
 
+// Store references to layers by zoning type for highlighting
+let zoningLayersByType = {};
+
+// Track currently highlighted zoning type
+let highlightedZoningType = null;
+
 // Store current hover state
 let currentHoverData = {
     zoning: null,
@@ -135,6 +141,13 @@ function updateInfoPanel() {
 
 // Event handlers for zoning layers
 function onEachZoningFeature(feature, layer) {
+    // Store layer reference by zoning type
+    const zoningType = feature.properties.ZONING;
+    if (!zoningLayersByType[zoningType]) {
+        zoningLayersByType[zoningType] = [];
+    }
+    zoningLayersByType[zoningType].push(layer);
+
     layer.on({
         mouseover: function(e) {
             highlightFeature(e);
@@ -204,6 +217,56 @@ async function loadMapData() {
     }
 }
 
+// Highlight all areas of a specific zoning type
+function highlightZoningType(zoningType) {
+    // If clicking the same type, unhighlight
+    if (highlightedZoningType === zoningType) {
+        unhighlightAllZoning();
+        return;
+    }
+
+    // Unhighlight previous selection
+    unhighlightAllZoning();
+
+    // Highlight the selected zoning type
+    highlightedZoningType = zoningType;
+
+    if (zoningLayersByType[zoningType]) {
+        zoningLayersByType[zoningType].forEach(layer => {
+            layer.setStyle({
+                fillColor: zoningColors[zoningType] || '#CCCCCC',
+                weight: 3,
+                opacity: 1,
+                color: '#333',
+                fillOpacity: 0.7
+            });
+            layer.bringToFront();
+        });
+    }
+
+    // Update legend UI
+    document.querySelectorAll('#zoning-legend .legend-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`#zoning-legend .legend-item[data-zone="${zoningType}"]`)?.classList.add('active');
+}
+
+// Remove highlighting from all zoning areas
+function unhighlightAllZoning() {
+    if (highlightedZoningType && zoningLayersByType[highlightedZoningType]) {
+        zoningLayersByType[highlightedZoningType].forEach(layer => {
+            layer.setStyle(zoningStyle(layer.feature));
+        });
+    }
+
+    highlightedZoningType = null;
+
+    // Update legend UI
+    document.querySelectorAll('#zoning-legend .legend-item').forEach(item => {
+        item.classList.remove('active');
+    });
+}
+
 // Build legend items dynamically from data
 function buildLegends(zoningData, schoolData) {
     // Zoning legend
@@ -212,7 +275,7 @@ function buildLegends(zoningData, schoolData) {
     zoningData.features.forEach(f => zoneTypes.add(f.properties.ZONING));
 
     zoningLegend.innerHTML = Array.from(zoneTypes).sort().map(type => `
-        <div class="legend-item">
+        <div class="legend-item" data-zone="${type}" onclick="highlightZoningType('${type}')">
             <div class="legend-color" style="background-color: ${zoningColors[type] || '#CCCCCC'}"></div>
             <span class="legend-label">${type}</span>
         </div>

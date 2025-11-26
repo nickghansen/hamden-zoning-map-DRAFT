@@ -168,6 +168,21 @@ body {
     align-items: center;
     margin: 0.5rem 0;
     gap: 0.75rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.legend-item:hover {
+    background-color: #f0f0f0;
+    transform: translateX(2px);
+}
+
+.legend-item.active {
+    background-color: #e3e8ff;
+    border: 2px solid #667eea;
+    padding: calc(0.5rem - 2px);
 }
 
 .legend-color {
