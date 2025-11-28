@@ -47,6 +47,12 @@ let zoningLayersByType = {};
 // Track currently highlighted zoning type
 let highlightedZoningType = null;
 
+// Store references to layers by school name for highlighting
+let schoolLayersByName = {};
+
+// Track currently highlighted school
+let highlightedSchool = null;
+
 // Store current hover state
 let currentHoverData = {
     zoning: null,
@@ -167,6 +173,13 @@ function onEachZoningFeature(feature, layer) {
 
 // Event handlers for school district layers
 function onEachSchoolFeature(feature, layer) {
+    // Store layer reference by school name
+    const schoolName = feature.properties.school_name;
+    if (!schoolLayersByName[schoolName]) {
+        schoolLayersByName[schoolName] = [];
+    }
+    schoolLayersByName[schoolName].push(layer);
+
     layer.on({
         mouseover: function(e) {
             highlightFeature(e);
@@ -267,6 +280,57 @@ function unhighlightAllZoning() {
     });
 }
 
+// Highlight all areas of a specific school district
+function highlightSchool(schoolName) {
+    // If clicking the same school, unhighlight
+    if (highlightedSchool === schoolName) {
+        unhighlightAllSchools();
+        return;
+    }
+
+    // Unhighlight previous selection
+    unhighlightAllSchools();
+
+    // Highlight the selected school
+    highlightedSchool = schoolName;
+
+    if (schoolLayersByName[schoolName]) {
+        schoolLayersByName[schoolName].forEach(layer => {
+            layer.setStyle({
+                fillColor: schoolColors[schoolName] || '#CCCCCC',
+                weight: 4,
+                opacity: 1,
+                color: schoolColors[schoolName] || '#CCCCCC',
+                dashArray: '8, 4',
+                fillOpacity: 0.3
+            });
+            layer.bringToFront();
+        });
+    }
+
+    // Update legend UI
+    document.querySelectorAll('#school-legend .legend-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`#school-legend .legend-item[data-school="${schoolName}"]`)?.classList.add('active');
+}
+
+// Remove highlighting from all school districts
+function unhighlightAllSchools() {
+    if (highlightedSchool && schoolLayersByName[highlightedSchool]) {
+        schoolLayersByName[highlightedSchool].forEach(layer => {
+            layer.setStyle(schoolStyle(layer.feature));
+        });
+    }
+
+    highlightedSchool = null;
+
+    // Update legend UI
+    document.querySelectorAll('#school-legend .legend-item').forEach(item => {
+        item.classList.remove('active');
+    });
+}
+
 // Build legend items dynamically from data
 function buildLegends(zoningData, schoolData) {
     // Zoning legend
@@ -287,7 +351,7 @@ function buildLegends(zoningData, schoolData) {
     schoolData.features.forEach(f => schools.add(f.properties.school_name));
 
     schoolLegend.innerHTML = Array.from(schools).sort().map(school => `
-        <div class="legend-item">
+        <div class="legend-item" data-school="${school}" onclick="highlightSchool('${school}')">
             <div class="legend-color" style="background-color: ${schoolColors[school] || '#CCCCCC'}"></div>
             <span class="legend-label">${school}</span>
         </div>
